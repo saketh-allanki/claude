@@ -61,6 +61,7 @@ export function statusPage(ctx, req, { page, monitors, brand, incidents }) {
     body,
     bare: true,
     canonical: `/status/${page.slug}`,
+    noindex: page.slug !== 'demo',
     head: html`<meta http-equiv="refresh" content="60">`,
   });
 }

@@ -32,13 +32,12 @@ function demoDashboard() {
   return html`<div class="demo-window" aria-label="Example dashboard (illustration)">
     <div class="demo-bar"><span></span><span></span><span></span><em>Illustration · example data</em></div>
     <div class="table-wrap"><table class="table demo-table">
-      <thead><tr><th>Site</th><th>Status</th><th class="num">Uptime</th><th>SSL</th><th>Domain</th></tr></thead>
+      <thead><tr><th>Site</th><th>Status</th><th>SSL</th><th>Domain</th></tr></thead>
       <tbody>
         ${rows.map(
-          ([site, status, up, ssl, sslCls, dom, domCls]) => html`<tr>
+          ([site, status, , ssl, sslCls, dom, domCls]) => html`<tr>
             <td><strong>${site}</strong></td>
             <td>${status === 'up' ? html`<span class="pill pill-good"><span class="dot"></span>Up</span>` : html`<span class="pill pill-bad"><span class="dot"></span>Down</span>`}</td>
-            <td class="num">${up}</td>
             <td><span class="expiry expiry-${sslCls}">${ssl}</span></td>
             <td><span class="expiry expiry-${domCls}">${dom}</span></td>
           </tr>`,

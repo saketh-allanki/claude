@@ -34,7 +34,12 @@ export function createApp({ config = loadConfig(), checks = {}, fetchImpl = glob
   ctx.billing = createBilling({ ...ctx, fetchImpl });
   ctx.reports = createReports(ctx);
   ctx.admin = createAdmin(ctx);
-  ctx.content = loadContent();
+  ctx.content = loadContent({ brandName: config.brandName });
+  // Reload hourly so future-dated guides publish themselves on their date.
+  const contentTimer = setInterval(() => {
+    ctx.content = loadContent({ brandName: config.brandName });
+  }, 3600_000);
+  contentTimer.unref?.();
   ctx.rateLimit = createRateLimiter();
   const domainChecker = createDomainChecker({ fetchImpl });
   ctx.checks = { http: httpCheck, ssl: sslCheck, domain: domainChecker.check, ...checks };
@@ -59,6 +64,7 @@ export function createApp({ config = loadConfig(), checks = {}, fetchImpl = glob
     });
 
   ctx.close = async () => {
+    clearInterval(contentTimer);
     await ctx.scheduler.stop();
     await new Promise((resolve) => ctx.server.close(() => resolve()));
     ctx.db.close();

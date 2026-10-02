@@ -11,7 +11,12 @@ import { DAY, utcDay } from '../lib/format.js';
 function cleanDomain(input) {
   const value = String(input || '').trim().toLowerCase();
   if (!value) return '';
-  const host = value.includes('://') ? new URL(value).hostname : value.split('/')[0].split(':')[0];
+  let host;
+  try {
+    host = value.includes('://') ? new URL(value).hostname : value.split('/')[0].split(':')[0];
+  } catch {
+    throw new UserError('Please enter a domain name like example.com.');
+  }
   if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(host) || host.length > 253) throw new UserError('Please enter a domain name like example.com.');
   return host;
 }
@@ -55,7 +60,7 @@ function demoPage(ctx) {
 }
 
 export function registerSiteRoutes(router, ctx) {
-  const { config, monitors: svc, accounts, reports, content, db, auth, checks, rateLimit } = ctx;
+  const { config, monitors: svc, accounts, reports, db, auth, checks, rateLimit } = ctx;
 
   router.get('/', (req, res) => sendHtml(res, 200, homePage(ctx, req)));
   router.get('/agencies', (req, res) => sendHtml(res, 200, agenciesPage(ctx, req)));
@@ -99,9 +104,9 @@ export function registerSiteRoutes(router, ctx) {
   });
 
   // ---- Guides & legal --------------------------------------------------------
-  router.get('/blog', (req, res) => sendHtml(res, 200, blogIndexPage(ctx, req, content.posts)));
+  router.get('/blog', (req, res) => sendHtml(res, 200, blogIndexPage(ctx, req, ctx.content.posts)));
   router.get('/blog/:slug', (req, res, { slug }) => {
-    const post = content.posts.find((p) => p.slug === slug);
+    const post = ctx.content.posts.find((p) => p.slug === slug);
     if (!post) return ctx.views.notFound(req, res);
     sendHtml(res, 200, blogPostPage(ctx, req, post));
   });
@@ -112,7 +117,7 @@ export function registerSiteRoutes(router, ctx) {
     sendText(res, 200, `User-agent: *\nAllow: /\nDisallow: /app\nDisallow: /admin\nDisallow: /auth\n\nSitemap: ${config.baseUrl}/sitemap.xml\n`),
   );
   router.get('/sitemap.xml', (req, res) => {
-    const paths = ['/', '/agencies', '/pricing', '/tools', ...toolList.map((t) => `/tools/${t.slug}`), '/blog', ...content.posts.map((p) => `/blog/${p.slug}`), '/signup', '/terms', '/privacy'];
+    const paths = ['/', '/agencies', '/pricing', '/tools', ...toolList.map((t) => `/tools/${t.slug}`), '/blog', ...ctx.content.posts.map((p) => `/blog/${p.slug}`), '/signup', '/terms', '/privacy'];
     const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${paths
       .map((p) => `  <url><loc>${config.baseUrl}${p}</loc></url>`)
       .join('\n')}\n</urlset>\n`;

@@ -1,0 +1,46 @@
+# Render.com blueprint (alternative to Fly.io). Requires a paid instance for the persistent disk.
+services:
+  - type: web
+    name: sitewarden
+    runtime: docker
+    plan: starter
+    healthCheckPath: /healthz
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_PATH
+        value: /data/sitewarden.db
+      - key: BACKUP_DIR
+        value: /data/backups
+      - key: TRUST_PROXY
+        value: "1"
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: BASE_URL
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: SUPPORT_EMAIL
+        sync: false
+      - key: EMAIL_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRICE_PRO_MONTHLY
+        sync: false
+      - key: STRIPE_PRICE_PRO_YEARLY
+        sync: false
+      - key: STRIPE_PRICE_AGENCY_MONTHLY
+        sync: false
+      - key: STRIPE_PRICE_AGENCY_YEARLY
+        sync: false
+      - key: STRIPE_PORTAL_CONFIGURATION
+        sync: false

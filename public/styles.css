@@ -103,7 +103,7 @@ code, pre { font-family: var(--mono); font-size: 0.9em; }
 
 input[type='text'], input[type='email'], input[type='url'], select {
   width: 100%; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
-  background: var(--surface); color: var(--ink); font: inherit; min-height: 44px;
+  background: var(--surface); color: var(--ink); font-family: inherit; font-size: 1rem; font-weight: 400; min-height: 44px;
 }
 input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 input:disabled, select:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -144,7 +144,7 @@ legend { font-weight: 600; padding: 0 6px; }
   .nav-links a, .nav-links .inline-form { padding: 8px 0; }
   .nav-toggle:checked ~ .nav-links { display: flex; }
 }
-.site-footer { border-top: 1px solid var(--line); padding: 48px 0 24px; margin-top: 64px; background: var(--surface); }
+.site-footer { border-top: 1px solid var(--line); padding: 48px 0 24px; background: var(--surface); }
 .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 32px; }
 .footer-grid h4 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 .footer-grid a:not(.brand) { display: block; color: var(--ink-2); padding: 3px 0; font-size: 0.95rem; }
@@ -166,8 +166,8 @@ legend { font-weight: 600; padding: 0 6px; }
 .signup-form input { border-color: var(--line); }
 .signup-form.compact { max-width: 640px; margin-left: auto; margin-right: auto; }
 .center .signup-form { text-align: left; }
-@media (max-width: 640px) { .signup-form { grid-template-columns: 1fr; } }
 form.signup-form:has(input[name='_csrf']) { grid-template-columns: 1fr auto; }
+@media (max-width: 640px) { .signup-form, form.signup-form:has(input[name='_csrf']) { grid-template-columns: 1fr; } }
 
 .demo-window { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
 .demo-bar { display: flex; gap: 6px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
@@ -240,8 +240,8 @@ ul.checks li::before { content: '✓'; position: absolute; left: 4px; color: var
 .interval-toggle .interval-month { text-align: left; }
 #int-year:checked ~ .interval-year { display: block; }
 #int-year:checked ~ .interval-month { display: none; }
-.compare th[scope='row'] { font-weight: 500; text-align: left; }
-.compare td { text-align: center; }
+.compare th[scope='row'] { font-weight: 500; text-align: left; text-transform: none; letter-spacing: 0; font-size: 0.95rem; color: var(--ink); white-space: normal; }
+.compare td, .compare thead th { text-align: center; }
 .yes { color: var(--good-ink); font-weight: 700; }
 .no { color: var(--muted); }
 

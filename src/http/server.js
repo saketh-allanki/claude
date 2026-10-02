@@ -1,6 +1,7 @@
 // HTTP plumbing: routing, body parsing, cookies, sessions, CSRF, security headers,
 // static assets and rate limiting — all on Node's built-in http module.
 import http from 'node:http';
+import net from 'node:net';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -134,6 +135,7 @@ export function createHttpServer(ctx, router) {
   const statics = loadStatic();
   ctx.asset = (name) => `/static/${name}?v=${statics.get(name)?.hash || '0'}`;
   const origin = new URL(config.baseUrl).origin;
+  const canonicalHost = new URL(config.baseUrl).host.toLowerCase();
 
   function securityHeaders(res, pathname) {
     const embeddable = pathname.startsWith('/status/') || pathname.startsWith('/badge/');
@@ -187,6 +189,14 @@ export function createHttpServer(ctx, router) {
     req.cookies = parseCookies(req.headers.cookie);
     res.cookies = [];
     securityHeaders(res, req.path);
+
+    // In production, send visitors on other hostnames (www., *.fly.dev) to the canonical address.
+    const host = String(req.headers.host || '').toLowerCase();
+    if (config.isProd && host && host !== canonicalHost && (req.method === 'GET' || req.method === 'HEAD') && req.path !== '/healthz' && !net.isIP(host.replace(/:\d+$/, '').replace(/^\[|\]$/g, ''))) {
+      res.writeHead(301, { Location: `${config.baseUrl}${req.url}` });
+      res.end();
+      return;
+    }
 
     if ((req.method === 'GET' || req.method === 'HEAD') && req.path.startsWith('/static/')) {
       if (serveStatic(req, res, req.path.slice('/static/'.length))) return;

@@ -1,0 +1,36 @@
+# Fly.io deployment (recommended). See docs/OWNER_GUIDE.md, step 3.
+# Change `app` to a unique name, then: fly launch --copy-config --no-deploy && fly volumes create data --size 1 && fly deploy
+app = "sitewarden"
+primary_region = "iad"
+
+[build]
+
+[env]
+  NODE_ENV = "production"
+  PORT = "8080"
+  DATABASE_PATH = "/data/sitewarden.db"
+  BACKUP_DIR = "/data/backups"
+  TRUST_PROXY = "1"
+
+[[mounts]]
+  source = "data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # The monitoring scheduler runs inside the app, so it must never be stopped.
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    path = "/healthz"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

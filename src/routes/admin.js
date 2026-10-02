@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { sendHtml, sendJson, redirect, setFlash } from '../http/server.js';
 import { adminPage } from '../views/admin.js';
+import { EMAIL_RE } from '../services/auth.js';
 
 export function registerAdminRoutes(router, ctx) {
   const { config, admin, accounts, billing, logger = console } = ctx;
@@ -24,6 +25,42 @@ export function registerAdminRoutes(router, ctx) {
     (req, res, { id }) => {
       accounts.setOverride(Number(id), String(req.body.plan || ''));
       setFlash(res, 'success', 'Complimentary plan updated.');
+      redirect(res, '/admin');
+    },
+    opts,
+  );
+
+  router.post(
+    '/admin/change-email',
+    (req, res) => {
+      const from = String(req.body.from || '').trim().toLowerCase();
+      const to = String(req.body.to || '').trim().toLowerCase();
+      const user = accounts.findByEmail(from);
+      if (!user) setFlash(res, 'error', `No account uses ${from}.`);
+      else if (!EMAIL_RE.test(to)) setFlash(res, 'error', `${to} is not a valid email address.`);
+      else if (accounts.findByEmail(to)) setFlash(res, 'error', `${to} already has an account.`);
+      else {
+        ctx.db.run('UPDATE users SET email = ? WHERE id = ?', to, user.id);
+        ctx.db.run('DELETE FROM sessions WHERE user_id = ?', user.id);
+        setFlash(res, 'success', `Changed ${from} to ${to}. They can now sign in with the new address.`);
+      }
+      redirect(res, '/admin');
+    },
+    opts,
+  );
+
+  router.post(
+    '/admin/delete-user',
+    async (req, res) => {
+      const email = String(req.body.email || '').trim().toLowerCase();
+      const user = accounts.findByEmail(email);
+      if (!user) setFlash(res, 'error', `No account uses ${email}.`);
+      else if (String(req.body.confirm || '').trim() !== 'DELETE') setFlash(res, 'error', 'Type DELETE to confirm.');
+      else {
+        await billing.cancelImmediately(user);
+        accounts.deleteUser(user.id);
+        setFlash(res, 'success', `Deleted ${email} and all of their data. Any subscription was cancelled.`);
+      }
       redirect(res, '/admin');
     },
     opts,

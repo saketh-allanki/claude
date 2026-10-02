@@ -1,8 +1,13 @@
 // Production entry point: `npm start`.
+import path from 'node:path';
 import { loadConfig } from './config.js';
 import { createApp } from './app.js';
+import { dropPrivileges } from './lib/privileges.js';
 
 const config = loadConfig();
+if (dropPrivileges(process.env.RUN_AS_USER, [path.dirname(path.resolve(config.databasePath)), config.backupDir])) {
+  console.log(`Running as user ${process.env.RUN_AS_USER}`);
+}
 const app = createApp({ config });
 const port = await app.listen(config.port);
 console.log(`${config.brandName} listening on port ${port} (${config.baseUrl})`);

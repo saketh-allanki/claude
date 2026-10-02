@@ -240,6 +240,7 @@ export function pagesListPage(ctx, req, { pages, plan }) {
       <div><h1>Status pages ${plan.reports ? '& client reports' : ''}</h1>
       <p class="muted">Group sites per client. Each group gets a public status page${plan.reports ? ' and a monthly emailed report' : ''}.</p></div>
     </div>
+    ${plan.whiteLabel && !req.user.brand_name ? html`<div class="flash flash-info">Add your agency name and logo in <a href="/app/settings">Settings</a> so reports and status pages carry your brand.</div>` : ''}
     ${pages.length
       ? html`<div class="card flush"><div class="table-wrap"><table class="table">
           <thead><tr><th>Name</th><th>Public address</th><th class="num">Sites</th><th>Monthly report</th></tr></thead>

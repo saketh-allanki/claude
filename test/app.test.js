@@ -42,6 +42,7 @@ test('free tools return results and are rate limited', async (t) => {
   assert.match(up.text, /is up and responding/);
   const bad = await c.get('/tools/ssl-checker?domain=not a domain');
   assert.equal(bad.status, 400);
+  assert.equal((await c.get('/tools/ssl-checker?domain=' + encodeURIComponent('https://[bad'))).status, 400);
   let last;
   for (let i = 0; i < 20; i++) last = await c.get('/tools/website-down-checker?url=example.com');
   assert.equal(last.status, 429);
@@ -182,6 +183,12 @@ test('Stripe webhooks upgrade and downgrade plans idempotently', async (t) => {
   assert.equal(app.accounts.findUser(user.id).plan, 'pro');
   assert.equal(app.admin.overview().mrr, 9);
 
+  // A grandfathered price from before a price change is still recognised via its metadata.
+  const legacy = sub('active', 'price_old_agency');
+  legacy.items.data[0].price.metadata = { plan: 'agency' };
+  await send({ id: 'evt_legacy', type: 'customer.subscription.updated', data: { object: legacy } });
+  assert.equal(app.accounts.findUser(user.id).plan, 'agency');
+
   await send({ id: 'evt_3', type: 'customer.subscription.deleted', data: { object: sub('canceled', 'price_pro_m') } });
   u = app.accounts.findUser(user.id);
   assert.equal(u.plan, 'free');
@@ -238,4 +245,11 @@ test('admin dashboard is available to owners', async (t) => {
   const res = await c.get('/admin');
   assert.equal(res.status, 200);
   assert.match(res.text, /Monthly recurring revenue/);
+  const csrf = res.text.match(/name="_csrf" value="([^"]+)"/)[1];
+  app.accounts.createUser('old@example.com');
+  await c.post('/admin/change-email', { from: 'old@example.com', to: 'new@example.com', _csrf: csrf });
+  assert.ok(app.accounts.findByEmail('new@example.com'));
+  assert.equal(app.accounts.findByEmail('old@example.com'), undefined);
+  await c.post('/admin/delete-user', { email: 'new@example.com', confirm: 'DELETE', _csrf: csrf });
+  assert.equal(app.accounts.findByEmail('new@example.com'), undefined);
 });

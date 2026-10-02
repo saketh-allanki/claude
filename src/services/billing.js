@@ -72,11 +72,17 @@ export function createBilling({ db, config, accounts, fetchImpl = globalThis.fet
     return data;
   }
 
-  function planForPrice(priceId) {
+  // Identifies the plan for a Stripe price. Prices from earlier price changes are still
+  // recognised through the plan metadata that `npm run stripe:setup` stores on every price.
+  function planForPrice(price) {
+    const priceId = typeof price === 'string' ? price : price?.id;
     for (const [plan, prices] of Object.entries(stripe.prices)) {
       if (priceId && (prices.month === priceId || prices.year === priceId)) return plan;
     }
-    return null;
+    const tagged = price?.metadata?.plan || price?.product?.metadata?.plan;
+    if (tagged && config.plans[tagged] && tagged !== 'free') return tagged;
+    const lookup = String(price?.lookup_key || '').match(/_(pro|agency)_(monthly|yearly)$/);
+    return lookup ? lookup[1] : null;
   }
 
   const hasActiveSubscription = (user) =>
@@ -134,7 +140,7 @@ export function createBilling({ db, config, accounts, fetchImpl = globalThis.fet
     }
     const item = sub.items?.data?.[0];
     const active = !deleted && ['active', 'trialing', 'past_due'].includes(sub.status);
-    const plan = active ? planForPrice(item?.price?.id) || 'free' : 'free';
+    const plan = active ? planForPrice(item?.price) || 'free' : 'free';
     const periodEnd = sub.current_period_end || item?.current_period_end;
     return accounts.setPlan(user.id, plan, {
       stripe_customer_id: sub.customer,

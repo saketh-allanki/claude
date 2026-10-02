@@ -6,13 +6,14 @@ import { parseFrontMatter, renderMarkdown } from '../lib/markdown.js';
 
 const BLOG_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../content/blog');
 
-export function loadContent(dir = BLOG_DIR, now = Date.now()) {
+export function loadContent({ dir = BLOG_DIR, now = Date.now(), brandName = 'Sitewarden' } = {}) {
   if (!fs.existsSync(dir)) return { posts: [] };
   const posts = fs
     .readdirSync(dir)
     .filter((f) => f.endsWith('.md'))
     .map((file) => {
-      const { meta, body } = parseFrontMatter(fs.readFileSync(path.join(dir, file), 'utf8'));
+      const source = fs.readFileSync(path.join(dir, file), 'utf8').replaceAll('{{brand}}', brandName);
+      const { meta, body } = parseFrontMatter(source);
       const { html } = renderMarkdown(body);
       const words = body.split(/\s+/).filter(Boolean).length;
       return {

@@ -36,6 +36,26 @@ export function adminPage(ctx, req, { o, users, backups }) {
         )}</tbody>
       </table></div>
     </section>
+    <section class="card form-card">
+      <h2 class="card-title">Change a customer's sign-in email</h2>
+      <p class="muted small">Only do this after the request comes from the current address.</p>
+      <form method="post" action="/admin/change-email" class="stack">
+        ${csrfField(req)}
+        <label>Current email<input name="from" type="email" required></label>
+        <label>New email<input name="to" type="email" required></label>
+        <div class="form-actions"><button class="btn btn-secondary" type="submit">Change email</button></div>
+      </form>
+    </section>
+    <section class="card form-card danger-zone">
+      <h2 class="card-title">Delete a customer's account (data deletion request)</h2>
+      <p class="muted small">Cancels their subscription immediately and permanently deletes their sites, history and settings.</p>
+      <form method="post" action="/admin/delete-user" class="stack" data-confirm="Permanently delete this customer and all their data?">
+        ${csrfField(req)}
+        <label>Customer email<input name="email" type="email" required></label>
+        <label>Type <strong>DELETE</strong> to confirm<input name="confirm" type="text" required autocomplete="off"></label>
+        <div class="form-actions"><button class="btn btn-danger" type="submit">Delete account</button></div>
+      </form>
+    </section>
     <section class="card">
       <h2 class="card-title">Backups</h2>
       ${backups.length

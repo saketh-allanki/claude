@@ -33,7 +33,7 @@ function layout({ config, title, body, brand, footerNote = '', unsubscribeUrl = 
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(title)}</title></head>
 <body style="margin:0;padding:0;background:#f4f4f1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${INK}">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f1;padding:24px 12px"><tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:620px;background:#ffffff;border-radius:12px;border:1px solid ${LINE}">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:620px;background:#ffffff;border-radius:12px;border:1px solid ${LINE};table-layout:fixed">
 <tr><td style="padding:24px 28px 8px">${logo}</td></tr>
 <tr><td style="padding:8px 28px 28px;font-size:15px;line-height:1.6">${body}</td></tr>
 </table>
@@ -215,33 +215,34 @@ export function nudgeEmail({ config, kind, user, unsubscribeUrl, stats = {} }) {
 function uptimeColor(uptime) {
   if (uptime == null) return MUTED;
   if (uptime >= 99.9) return '#006300';
-  if (uptime >= 99) return '#8a5a00';
+  if (uptime >= 99) return INK;
   return '#b42318';
 }
 
-function expiryCell(ms, now) {
-  if (!ms) return '<span style="color:#898781">—</span>';
+function expiryLine(label, ms, now) {
+  if (!ms) return '';
   const days = daysUntil(ms, now);
   const color = days < 0 ? '#b42318' : days <= 14 ? '#8a5a00' : INK;
-  return `<span style="color:${color}">${formatDate(ms)}</span>`;
+  return `<span style="color:${MUTED}">${label}</span> <span style="color:${color};white-space:nowrap">${formatDate(ms)}</span>`;
 }
+
 
 export function reportEmail({ config, report, brand, showPoweredBy }) {
   const now = report.end;
   const color = brand.color || ACCENT;
   const subject = `${report.page.title}: website report for ${report.periodLabel}`;
-  const td = 'padding:10px 8px;border-bottom:1px solid ' + LINE + ';font-size:13px;vertical-align:top';
-  const th = 'padding:8px;border-bottom:1px solid ' + LINE + ';font-size:12px;color:' + MUTED + ';text-align:left;font-weight:600';
+  const td = 'padding:10px 0;border-bottom:1px solid ' + LINE + ';font-size:14px;line-height:1.7;vertical-align:top';
   const rows = report.monitors
-    .map(
-      (m) => `<tr>
-      <td style="${td}"><strong>${e(m.name)}</strong><br><span style="color:${MUTED}">${e(hostnameOf(m.url))}</span></td>
-      <td style="${td};color:${uptimeColor(m.uptime)};font-weight:600">${formatPercent(m.uptime)}</td>
-      <td style="${td}">${formatMs(m.avgMs)}</td>
-      <td style="${td}">${m.incidents}</td>
-      <td style="${td}">${expiryCell(m.sslExpiresAt, now)}</td>
-      <td style="${td}">${expiryCell(m.domainExpiresAt, now)}</td></tr>`,
-    )
+    .map((m) => {
+      const renewals = [expiryLine('SSL renews', m.sslExpiresAt, now), expiryLine('Domain renews', m.domainExpiresAt, now)].filter(Boolean);
+      return `<tr><td style="${td}">
+        <strong>${e(m.name)}</strong> <span style="color:${MUTED}">· ${e(hostnameOf(m.url))}</span><br>
+        Uptime <strong style="color:${uptimeColor(m.uptime)}">${formatPercent(m.uptime)}</strong>
+        <span style="color:${MUTED}">·</span> Avg. response <strong>${formatMs(m.avgMs)}</strong>
+        <span style="color:${MUTED}">·</span> Incidents <strong>${m.incidents}</strong>
+        ${renewals.length ? `<br>${renewals.join(' <span style="color:' + MUTED + '">·</span> ')}` : ''}
+      </td></tr>`;
+    })
     .join('');
   const incidents = report.incidents.length
     ? `<h2 style="font-size:16px;margin:28px 0 8px">Incidents</h2>
@@ -268,7 +269,7 @@ export function reportEmail({ config, report, brand, showPoweredBy }) {
     : '';
 
   const stat = (label, value, valueColor = INK) =>
-    `<td style="padding:12px;border:1px solid ${LINE};border-radius:8px;width:33%"><div style="font-size:12px;color:${MUTED}">${label}</div><div style="font-size:22px;font-weight:700;color:${valueColor}">${value}</div></td>`;
+    `<td style="padding:10px;border:1px solid ${LINE};border-radius:8px;width:33%;vertical-align:top"><div style="font-size:12px;color:${MUTED}">${label}</div><div style="font-size:20px;font-weight:700;color:${valueColor};white-space:nowrap">${value}</div></td>`;
 
   const body =
     h1(`Website report · ${e(report.periodLabel)}`) +
@@ -278,10 +279,8 @@ export function reportEmail({ config, report, brand, showPoweredBy }) {
       ${stat('Incidents', String(report.overall.incidents))}
       ${stat('Avg. response', formatMs(report.overall.avgMs))}
     </tr></table>
-    <div style="overflow-x:auto"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      <tr><th style="${th}">Site</th><th style="${th}">Uptime</th><th style="${th}">Avg. response</th><th style="${th}">Incidents</th><th style="${th}">SSL expires</th><th style="${th}">Domain expires</th></tr>
-      ${rows}
-    </table></div>` +
+    <h2 style="font-size:16px;margin:8px 0 4px">Sites</h2>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>` +
     incidents +
     renewalNote +
     button(`${config.baseUrl}/status/${report.page.slug}`, 'View live status page', color);

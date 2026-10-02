@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning src/index.js",
-    "dev": "node --disable-warning=ExperimentalWarning --watch src/index.js",
+    "dev": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env --watch src/index.js",
     "test": "node --disable-warning=ExperimentalWarning --test test/*.test.js",
     "stripe:setup": "node scripts/stripe-setup.js",
     "demo": "node --disable-warning=ExperimentalWarning scripts/demo.js"

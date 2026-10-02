@@ -1,0 +1,17 @@
+{
+  "name": "sitewarden",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Uptime, SSL and domain-expiry monitoring with white-label client reports for web agencies and freelancers.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/index.js",
+    "dev": "node --disable-warning=ExperimentalWarning --watch src/index.js",
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.js",
+    "stripe:setup": "node scripts/stripe-setup.js",
+    "demo": "node --disable-warning=ExperimentalWarning scripts/demo.js"
+  }
+}

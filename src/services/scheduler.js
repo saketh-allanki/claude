@@ -190,8 +190,8 @@ export function createScheduler(ctx) {
 
   async function runDomainCheck(monitor) {
     const host = new URL(monitor.url).hostname.replace(/^\[|\]$/g, '');
-    const result = net.isIP(host)
-      ? { ok: false, unsupported: true, error: 'Domain expiry does not apply to IP addresses' }
+    const result = net.isIP(host) || !host.includes('.')
+      ? { ok: false, unsupported: true, error: 'Domain expiry does not apply to this address' }
       : await checks.domain(host);
     const fresh = db.get('SELECT * FROM monitors WHERE id = ?', monitor.id);
     if (!fresh) return;

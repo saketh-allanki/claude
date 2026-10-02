@@ -1,7 +1,7 @@
 // Screens inside the logged-in app.
 import { html } from '../lib/html.js';
 import { layout } from './layout.js';
-import { statusPill, expiryBadge, uptimeBars, responseChart, statTile, dailyTable, csrfField, UPTIME_LEGEND } from './components.js';
+import { statusPill, expiryBadge, uptimeBars, responseChart, statTile, dailyTable, csrfField, UPTIME_LEGEND, windowLabel } from './components.js';
 import { formatPercent, formatMs, timeAgo, formatDateTime, formatDate, formatDuration, hostnameOf, formatMoney } from '../lib/format.js';
 
 const INTERVALS = [
@@ -126,7 +126,7 @@ export function monitorFormPage(ctx, req, { monitor = null, plan, pages, values 
   return appLayout(ctx, req, monitor ? 'Edit site' : 'Add site', body);
 }
 
-export function monitorDetailPage(ctx, req, { monitor, bars, series, incidents, uptime30, uptime7, avg30 }) {
+export function monitorDetailPage(ctx, req, { monitor, bars, series, chartHours, incidents, uptime30, uptime7, avg30 }) {
   const now = Date.now();
   const m = monitor;
   const sslSub = m.ssl_expires_at ? `${formatDate(m.ssl_expires_at)}${m.ssl_issuer ? ` · ${m.ssl_issuer}` : ''}` : m.ssl_error || '';
@@ -156,8 +156,8 @@ export function monitorDetailPage(ctx, req, { monitor, bars, series, incidents, 
     </div>
 
     <section class="card">
-      <h2 class="card-title">Response time · last 24 hours</h2>
-      ${responseChart(series, { hours: 24, now })}
+      <h2 class="card-title">Response time · ${windowLabel(chartHours)}</h2>
+      ${responseChart(series, { hours: chartHours, now })}
     </section>
 
     <section class="card">
@@ -287,7 +287,7 @@ export function pageEditPage(ctx, req, { page, monitors, plan }) {
       <form method="post" action="/app/pages/${page.id}" class="stack">
         ${csrfField(req)}
         <label>Name<input name="title" type="text" required maxlength="80" value="${page.title}"></label>
-        <label>Page address<div class="input-prefix"><span>/status/</span><input name="slug" type="text" required value="${page.slug}" pattern="[a-z0-9-]{3,50}"></div></label>
+        <label>Page address<div class="input-prefix"><span>/status/</span><input name="slug" type="text" required value="${page.slug}" pattern="[a-z0-9\-]{3,50}"></div></label>
         ${plan.reports
           ? html`<label>Monthly report recipients<input name="reportEmails" type="text" value="${page.report_emails || ''}" placeholder="client@example.com"><span class="hint">Sent automatically on the 1st of each month, from your brand. Leave empty to turn reports off.</span></label>`
           : html`<p class="small muted">Branded monthly client reports are part of the <a href="/app/billing">Agency plan</a>.</p>`}

@@ -67,6 +67,17 @@ function niceStep(max) {
   return 10 * pow;
 }
 
+const TICK_MINUTES = { 1: 15, 3: 60, 6: 120, 12: 180, 24: 360 };
+
+// The chart covers 24 hours, or less for new sites so their first checks aren't a sliver at the edge.
+export function chartWindowHours(createdAt, now = Date.now()) {
+  const ageHours = (now - createdAt) / 3600_000;
+  for (const h of [1, 3, 6, 12]) if (ageHours <= h) return h;
+  return 24;
+}
+
+export const windowLabel = (hours) => (hours === 1 ? 'last hour' : `last ${hours} hours`);
+
 // Response-time line chart (single series) with failed checks marked along the baseline.
 export function responseChart(points, { hours = 24, now = Date.now() } = {}) {
   const W = 720;
@@ -77,7 +88,7 @@ export function responseChart(points, { hours = 24, now = Date.now() } = {}) {
   const start = now - hours * 3600_000;
   const okPoints = points.filter((p) => p.ok && p.ms != null);
   if (!points.length) {
-    return html`<div class="chart-empty muted">No checks in the last ${hours} hours yet. The chart fills in as checks run.</div>`;
+    return html`<div class="chart-empty muted">No checks in the ${windowLabel(hours)} yet. The chart fills in as checks run.</div>`;
   }
   const maxMs = Math.max(100, ...okPoints.map((p) => p.ms));
   const step = niceStep(maxMs);
@@ -108,10 +119,11 @@ export function responseChart(points, { hours = 24, now = Date.now() } = {}) {
     );
   }
   const xticks = [];
-  for (let hAgo = hours; hAgo >= 0; hAgo -= hours / 4) {
-    const t = now - hAgo * 3600_000;
-    const label = hAgo === 0 ? 'now' : `${hAgo}h ago`;
-    xticks.push(`<text class="tick" x="${x(t)}" y="${H - 8}" text-anchor="${hAgo === hours ? 'start' : hAgo === 0 ? 'end' : 'middle'}">${label}</text>`);
+  const tickStep = TICK_MINUTES[hours] || (hours * 60) / 4;
+  for (let mAgo = hours * 60; mAgo >= 0; mAgo -= tickStep) {
+    const t = now - mAgo * 60_000;
+    const label = mAgo === 0 ? 'now' : mAgo < 60 ? `${mAgo}m ago` : `${mAgo / 60}h ago`;
+    xticks.push(`<text class="tick" x="${x(t)}" y="${H - 8}" text-anchor="${mAgo === hours * 60 ? 'start' : mAgo === 0 ? 'end' : 'middle'}">${label}</text>`);
   }
   const failures = points
     .filter((p) => !p.ok)
@@ -121,7 +133,7 @@ export function responseChart(points, { hours = 24, now = Date.now() } = {}) {
   const hasFailures = points.some((p) => !p.ok);
 
   return html`<figure class="chart" data-chart="response" data-start="${start}" data-end="${now}" data-points="${data}"
-      data-left="${pad.l}" data-right="${pad.r}" data-width="${W}" tabindex="0" aria-label="Response time over the last ${hours} hours. Use arrow keys to inspect values.">
+      data-left="${pad.l}" data-right="${pad.r}" data-width="${W}" tabindex="0" aria-label="Response time over the ${windowLabel(hours)}. Use arrow keys to inspect values.">
     <svg viewBox="0 0 ${W} ${H}" role="img" aria-hidden="true">
       ${raw(grid.join(''))}
       <line class="baseline" x1="${pad.l}" x2="${W - pad.r}" y1="${pad.t + ih}" y2="${pad.t + ih}"/>

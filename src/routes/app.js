@@ -11,6 +11,7 @@ import {
   billingPage,
 } from '../views/app.js';
 import { UserError } from '../lib/errors.js';
+import { chartWindowHours } from '../views/components.js';
 import { DAY, previousMonthRange } from '../lib/format.js';
 
 export function registerAppRoutes(router, ctx) {
@@ -93,13 +94,15 @@ export function registerAppRoutes(router, ctx) {
       const bars = svc.dailyBars(monitor.id, 90, now);
       const u30 = svc.uptimeBetween(monitor.id, now - 29 * DAY, now + DAY);
       const u7 = svc.uptimeBetween(monitor.id, now - 6 * DAY, now + DAY);
+      const chartHours = chartWindowHours(monitor.created_at, now);
       sendHtml(
         res,
         200,
         monitorDetailPage(ctx, req, {
           monitor,
           bars,
-          series: svc.responseSeries(monitor.id, 24, now),
+          series: svc.responseSeries(monitor.id, chartHours, now),
+          chartHours,
           incidents: svc.incidents(monitor.id),
           uptime30: u30.uptime,
           uptime7: u7.uptime,

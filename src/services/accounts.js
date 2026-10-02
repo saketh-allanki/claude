@@ -1,5 +1,6 @@
 // Plans, limits and account lifecycle.
 import { PLAN_ORDER } from '../config.js';
+import { resetMonitorState } from './monitors.js';
 
 export function createAccounts({ db, config }) {
   const planId = (user) => {
@@ -31,6 +32,7 @@ export function createAccounts({ db, config }) {
           }
         } else if (!m.paused) {
           db.run("UPDATE monitors SET paused = 1, paused_reason = 'plan_limit' WHERE id = ?", m.id);
+          resetMonitorState(db, m.id, now);
         }
         if (m.interval_sec < plan.minInterval) {
           db.run('UPDATE monitors SET interval_sec = ? WHERE id = ?', plan.minInterval, m.id);

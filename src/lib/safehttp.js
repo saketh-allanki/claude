@@ -24,9 +24,18 @@ const FRIENDLY_ERRORS = {
   HPE_INVALID_CONSTANT: 'Server sent an invalid HTTP response',
 };
 
+const HTTPS_HANDSHAKE_FAILED =
+  'Could not open a secure (HTTPS) connection. If this site only works over plain http://, change the URL to start with http://';
+
 export function friendlyError(err) {
   if (!err) return 'Unknown error';
-  return FRIENDLY_ERRORS[err.code] || err.message || String(err);
+  if (FRIENDLY_ERRORS[err.code]) return FRIENDLY_ERRORS[err.code];
+  const message = String(err.message || err);
+  // Raw OpenSSL errors (e.g. talking HTTPS to a plain-HTTP server) are unreadable for customers.
+  if (err.code === 'EPROTO' || /SSL routines|wrong version number|packet length too long/i.test(message)) {
+    return HTTPS_HANDSHAKE_FAILED;
+  }
+  return message.length > 200 ? `${message.slice(0, 197)}...` : message;
 }
 
 function requestOnce(url, { method, headers, body, timeoutMs, allowPrivate, readBody }) {

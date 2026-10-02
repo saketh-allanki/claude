@@ -9,6 +9,7 @@ import { expiryBucket } from '../src/services/scheduler.js';
 import { registrableDomain, parseRdap } from '../src/checks/domain.js';
 import { normalizeUrl, slugify } from '../src/services/monitors.js';
 import { SSL_THRESHOLDS, DOMAIN_THRESHOLDS } from '../src/config.js';
+import { chartWindowHours, responseChart } from '../src/views/components.js';
 
 test('html escapes interpolations but not raw()', () => {
   const name = '<script>alert("x")</script>';
@@ -132,4 +133,18 @@ test('URLs are normalised and unsafe targets rejected', () => {
   assert.throws(() => normalizeUrl('http://printer.local'), /public website/);
   assert.equal(normalizeUrl('http://localhost:3000', { allowPrivate: true }), 'http://localhost:3000/');
   assert.equal(slugify('Bright Smile Dental!'), 'bright-smile-dental');
+});
+
+test('response chart window shrinks for new sites and labels ticks sensibly', () => {
+  const now = Date.now();
+  assert.equal(chartWindowHours(now - 5 * 60_000, now), 1);
+  assert.equal(chartWindowHours(now - 2 * 3600_000, now), 3);
+  assert.equal(chartWindowHours(now - 10 * 3600_000, now), 12);
+  assert.equal(chartWindowHours(now - 30 * 3600_000, now), 24);
+  const points = [{ at: now - 120_000, ok: 1, ms: 120 }, { at: now - 60_000, ok: 0, ms: null }];
+  const hour = String(responseChart(points, { hours: 1, now }));
+  for (const label of ['1h ago', '45m ago', '30m ago', '15m ago', 'now']) assert.ok(hour.includes(`>${label}<`), label);
+  const day = String(responseChart(points, { hours: 24, now }));
+  for (const label of ['24h ago', '18h ago', '12h ago', '6h ago']) assert.ok(day.includes(`>${label}<`), label);
+  assert.match(String(responseChart([], { hours: 1, now })), /No checks in the last hour yet/);
 });

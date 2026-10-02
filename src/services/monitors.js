@@ -29,6 +29,13 @@ export function normalizeUrl(input, { allowPrivate = false } = {}) {
   return url.toString();
 }
 
+// Stops tracking a monitor's current state (its URL changed or it was paused): closes any
+// open incident so it is not counted as downtime forever, and the next check starts fresh.
+export function resetMonitorState(db, monitorId, now = Date.now()) {
+  db.run('UPDATE incidents SET resolved_at = ? WHERE monitor_id = ? AND resolved_at IS NULL', now, monitorId);
+  db.run("UPDATE monitors SET status = 'pending', status_since = NULL, consecutive_failures = 0 WHERE id = ?", monitorId);
+}
+
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,48}[a-z0-9])?$/;
 
 export function slugify(text) {
@@ -103,6 +110,7 @@ export function createMonitorService({ db, config, accounts }) {
       id,
       user.id,
     );
+    if (urlChanged) resetMonitorState(db, monitor.id, now);
     return get(user.id, id);
   }
 
@@ -128,13 +136,15 @@ export function createMonitorService({ db, config, accounts }) {
     if (!paused && monitor.paused_reason === 'plan_limit') {
       throw new UserError('This site is paused because your plan limit was reached. Upgrade to resume it.', 402);
     }
+    const now = Date.now();
     db.run(
       'UPDATE monitors SET paused = ?, paused_reason = ?, next_check_at = ? WHERE id = ?',
       paused ? 1 : 0,
       paused ? 'user' : null,
-      Date.now(),
+      now,
       monitor.id,
     );
+    if (paused) resetMonitorState(db, monitor.id, now);
   }
 
   function remove(user, id) {

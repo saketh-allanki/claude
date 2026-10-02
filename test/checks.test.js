@@ -71,6 +71,12 @@ test('http check: success, errors, keywords, redirects, timeouts and SSRF guard'
   assert.equal(blocked.ok, false);
   assert.match(blocked.error, /private network/);
 
+  // HTTPS to a plain-HTTP server produces a readable message, not a raw OpenSSL dump.
+  const wrongScheme = await httpCheck(`https://127.0.0.1:${port}/ok`, opts);
+  assert.equal(wrongScheme.ok, false);
+  assert.match(wrongScheme.error, /^Could not open a secure \(HTTPS\) connection/);
+  assert.doesNotMatch(wrongScheme.error, /SSL routines/);
+
   const refused = await httpCheck('http://127.0.0.1:1/', opts);
   assert.equal(refused.ok, false);
   assert.match(refused.error, /refused/i);

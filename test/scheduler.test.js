@@ -182,3 +182,42 @@ test('lifecycle emails are sent once and respect opt-out', async (t) => {
   const unsub = app.mailer.outbox.find((m) => m.to.includes('lonely@example.com')).text.match(/Unsubscribe: (\S+)/)[1];
   assert.match(unsub, new RegExp(`/unsubscribe\\?u=${lonely.id}&s=`));
 });
+
+test('changing the URL or pausing a down site closes its open incident', async (t) => {
+  const { app, user, monitor } = await setup();
+  t.after(() => app.close());
+  const s = app.scheduler;
+  const goDown = (id, at) => {
+    s.applyHttpResult(fresh(app, id), { ok: false, error: 'HTTP 500' }, at);
+    s.applyHttpResult(fresh(app, id), { ok: false, error: 'HTTP 500' }, at + 30_000);
+    assert.equal(fresh(app, id).status, 'down');
+  };
+  const openIncidents = (id) => app.db.get('SELECT COUNT(*) AS n FROM incidents WHERE monitor_id = ? AND resolved_at IS NULL', id).n;
+  const t0 = Date.now() - 3600_000;
+
+  goDown(monitor.id, t0);
+  assert.equal(openIncidents(monitor.id), 1);
+  app.monitors.update(user, monitor.id, { url: 'https://other.example.com' });
+  assert.equal(openIncidents(monitor.id), 0);
+  assert.equal(fresh(app, monitor.id).status, 'pending');
+
+  // Editing without changing the URL keeps the incident open.
+  goDown(monitor.id, t0 + 60_000);
+  app.monitors.update(user, monitor.id, { url: 'https://other.example.com', name: 'Renamed' });
+  assert.equal(openIncidents(monitor.id), 1);
+
+  app.monitors.setPaused(user, monitor.id, true);
+  assert.equal(openIncidents(monitor.id), 0);
+  assert.equal(fresh(app, monitor.id).status, 'pending');
+
+  // Pausing because of a plan limit closes incidents too.
+  app.monitors.setPaused(user, monitor.id, false);
+  app.accounts.setPlan(user.id, 'pro');
+  const extra = [];
+  for (let i = 0; i < 5; i++) extra.push(app.monitors.create(app.accounts.findUser(user.id), { url: `https://e${i}.example.com` }));
+  const last = extra.at(-1);
+  goDown(last.id, t0 + 120_000);
+  app.accounts.setPlan(user.id, 'free');
+  assert.equal(fresh(app, last.id).paused_reason, 'plan_limit');
+  assert.equal(openIncidents(last.id), 0);
+});
